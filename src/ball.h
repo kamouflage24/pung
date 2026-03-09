@@ -13,6 +13,23 @@ typedef struct {
 
 Entity* SpawnBall(AppContext* _app, Entity* _entity);
 
+bool CheckCollision(Entity* a, Entity* b){
+    float ax = a->transform.position.x;
+    float ay = a->transform.position.y;
+    float aw = a->transform.scale.x;
+    float ah = a->transform.scale.y;
+
+    float bx = b->transform.position.x;
+    float by = b->transform.position.y;
+    float bw = b->transform.scale.x;
+    float bh = b->transform.scale.y;
+
+    if(fabs(ax - bx) < (aw + bw) * 0.5f && fabs(ay - by) < (ah + bh) * 0.5f)
+    {
+        return true;
+    }
+    return false;
+}
 void BallStart(AppContext* _app, Entity* _entity) {
     _entity->color = InitVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -21,7 +38,7 @@ void BallStart(AppContext* _app, Entity* _entity) {
 
 void BallUpdate(AppContext* _app, Entity* _entity) {
 
-    if (GetKeyDown(_app, SDL_SCANCODE_P))
+    if (GetKey(_app, SDL_SCANCODE_P))
     {
         SpawnBall(_app, _entity);
     }
@@ -35,25 +52,63 @@ void BallUpdate(AppContext* _app, Entity* _entity) {
             (Vector2){0.72f, -0.72f},
             (Vector2){-0.72f, 0.72f},
             (Vector2){-0.72f, -0.72f},
+    
         };
 
         _entity->velocity = Vec2Mul(directions[startingDirection], 150.0f);
     }
 
     // check if ball is heading below the screen
+    
+    Entity* lp = Find(&_app->scene, "leftPaddle");
+    Entity* rp = Find(&_app->scene, "rightPaddle");
+
+    if(lp && CheckCollision(_entity, lp) && _entity->velocity.x < 0){
+        _entity->velocity.x *= -1;
+        _entity->velocity.x *= 1.2f;
+        _entity->color = lp->color;
+        float offset = _entity->transform.position.y - lp->transform.position.y;
+        _entity->velocity.y = offset * 5.0f;
+        float paddleEdge = lp->transform.position.x + lp->transform.scale.x * 0.5f;
+        _entity->transform.position.x = paddleEdge + _entity->transform.scale.x * 0.5f;
+    }
+    else if(rp && CheckCollision(_entity, rp) && _entity->velocity.x > 0){
+        _entity->velocity.x *= -1;
+        _entity->velocity.x *= 1.2f;
+        _entity->color = rp->color;
+
+        float offset = _entity->transform.position.y - rp->transform.position.y;
+        _entity->velocity.y = offset * 5.0f;
+        float paddleEdge = rp->transform.position.x - rp->transform.scale.x * 0.5f;
+        _entity->transform.position.x = paddleEdge - _entity->transform.scale.x * 0.5f;
+    }
     if (_entity->transform.position.y - _entity->transform.scale.y * 0.5f <= 0.0f && _entity->velocity.y < 0.0f)
         _entity->velocity.y *= -1.0f; 
     
     // check if ball is heading above the screen
-    if (_entity->transform.position.y + _entity->transform.scale.y * 0.5f >= _app->windowHeight && _entity->velocity.y > 0.0f)
+    if (_entity->transform.position.y + _entity->transform.scale.y * 0.5f >= _app->windowHeight && _entity->velocity.y > 0.0f){
         _entity->velocity.y *= -1.0f; 
-
+    }
     Vector3 delta = Vec2ToVec3(Vec2Mul(_entity->velocity, _app->deltaTime));
     _entity->transform.position = Vec3Add(_entity->transform.position, delta);
 
-    Entity* lp = Find(&_app->scene, "leftPaddle");
-    if (lp)
-        printf("LeftPaddle: %s\n", lp->name);
+    Ball* ball = (Ball*)(_entity->data);
+    if (_entity->transform.position.x < 0.0f)
+    {
+            ball->rightScore++;
+            printf("Left Player Score: %d / Right Player Score: %d\n", ball->leftScore, ball->rightScore);
+            _entity->transform.position = InitVector3(_app->windowWidth * 0.5f, _app->windowHeight * 0.5f, 0.0f);
+            _entity->velocity = InitVector2(0.0f, 0.0f);
+
+    }
+    else if (_entity->transform.position.x > _app->windowWidth){
+            
+            ball->leftScore++;
+            printf("Left Player Score: %d / Right Player Score: %d\n", ball->leftScore, ball->rightScore);
+            _entity->transform.position = InitVector3(_app->windowWidth * 0.5f, _app->windowHeight * 0.5f, 0.0f);
+            _entity->velocity = InitVector2(0.0f, 0.0f);
+    }
+
 }
 
 void BallDraw(AppContext* _app, Entity* _entity) {

@@ -51,8 +51,8 @@ Scene* SceneFree(Scene** _scene) {
 }
 
 Entity* Spawn(Scene** _scene) {
-    Entity entity;
-    vec_add(&(*_scene)->startEntities, &entity);
+    Entity entity = {0};
+    vec_add(&(*_scene)->startEntities, &(entity));
     int index = vec_count(&(*_scene)->startEntities) - 1;
 
     Entity* e = &(*_scene)->startEntities[index];

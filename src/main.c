@@ -91,10 +91,12 @@ int main(int argc, char *argv[])
     leftPaddle->image = &squareImage;
     leftPaddle->model = &model;
     leftPaddle->shaderId = shaderProgram;
+    leftPaddle->color = InitVector4(1.0f, 0.0f, 0.0f, 1.0f);
     leftPaddle->Start = PaddleStart;
     leftPaddle->Update = PaddleUpdate;
     leftPaddle->Draw = PaddleDraw;
     leftPaddle->OnDestroy = PaddleOnDestroy;
+    
 
     Entity* rightPaddle = Spawn(&scene);
     rightPaddle->name = "rightPaddle";
@@ -103,10 +105,13 @@ int main(int argc, char *argv[])
     rightPaddle->image = &squareImage;
     rightPaddle->model = &model;
     rightPaddle->shaderId = shaderProgram;
+    rightPaddle->color = InitVector4(0.0f, 1.0f, 0.0f, 1.0f);
     rightPaddle->Start = PaddleStart;
     rightPaddle->Update = PaddleUpdate;
     rightPaddle->Draw = PaddleDraw;
     rightPaddle->OnDestroy = PaddleOnDestroy;
+    
+    SceneStart(&app, &scene);
     
     bool running = true;
     f32 time = 0.0f;
@@ -130,13 +135,13 @@ int main(int argc, char *argv[])
         
         app.time = SDL_GetTicksNS() * 1e-9;
 
-        SceneStart(&app, &scene);
 
         app.projection = Mat4Orthographic(0.0f, (float)app.windowWidth, 0.0f, (float)app.windowHeight, 0.001f, 100.0f); 
         app.view = IdentityMatrix4(); 
         Mat4Translate(&app.view, InitVector3(0.0f, 0.0f, -0.5f));
 
         SceneUpdate(&app, &scene);
+        
 
         SceneDraw(&app, &scene);
 

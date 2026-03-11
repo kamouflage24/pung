@@ -11,6 +11,8 @@ typedef struct {
     int rightScore;
 } Ball;
 
+
+
 Entity* SpawnBall(AppContext* _app, Entity* _entity);
 
 bool CheckCollision(Entity* a, Entity* b){
@@ -30,6 +32,25 @@ bool CheckCollision(Entity* a, Entity* b){
     }
     return false;
 }
+void BallDraw(AppContext* _app, Entity* _entity) {
+    Matrix4 transform = IdentityMatrix4(); // the order is important
+    Mat4Translate(&transform, _entity->transform.position);
+    Mat4Rotate(&transform, _entity->transform.rotation * DEG2RAD, InitVector3(0.0f, 0.0f, 1.0f));
+    Mat4Scale(&transform, InitVector3(_entity->transform.scale.x, _entity->transform.scale.y, _entity->transform.scale.z));
+
+    BindShader(_entity->shaderId);
+
+    ShaderSetFloat(_entity->shaderId, "TIME", _app->time);
+    ShaderSetMatrix4(_entity->shaderId, "VIEW", _app->view);
+    ShaderSetMatrix4(_entity->shaderId, "PROJECTION", _app->projection);
+
+    ShaderSetVector4(_entity->shaderId, "COLOR", _entity->color);
+    ShaderBindTexture(_entity->shaderId, _entity->image->id, "MAIN_TEXTURE", 0);
+    ShaderSetMatrix4(_entity->shaderId, "TRANSFORM", transform);
+    DrawModel(*_entity->model);
+
+    UnBindShader();
+}
 void BallStart(AppContext* _app, Entity* _entity) {
     _entity->color = InitVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -37,6 +58,7 @@ void BallStart(AppContext* _app, Entity* _entity) {
 }
 
 void BallUpdate(AppContext* _app, Entity* _entity) {
+
 
     if (GetKey(_app, SDL_SCANCODE_P))
     {
@@ -56,7 +78,8 @@ void BallUpdate(AppContext* _app, Entity* _entity) {
         };
 
         _entity->velocity = Vec2Mul(directions[startingDirection], 150.0f);
-    }
+    } 
+    
 
     // check if ball is heading below the screen
     
@@ -96,45 +119,69 @@ void BallUpdate(AppContext* _app, Entity* _entity) {
     if (_entity->transform.position.x < 0.0f)
     {
             ball->rightScore++;
-            printf("Left Player Score: %d / Right Player Score: %d\n", ball->leftScore, ball->rightScore);
+            printf_s("Left Player Score: %d / Right Player Score: %d\n", ball->leftScore, ball->rightScore);
             _entity->transform.position = InitVector3(_app->windowWidth * 0.5f, _app->windowHeight * 0.5f, 0.0f);
             _entity->velocity = InitVector2(0.0f, 0.0f);
+            if(ball->rightScore == 5){
+                printf("Right Player Wins!\n");
+                // for(int i = 0; i < vec_count(&_app->scene->entities); i++){
+                    
+                //     Entity* fall = Spawn(&_app->scene);
+                //     float x = rand() % _app->windowWidth;
+                //     float y = rand() % _app->windowHeight + (rand() % 100);
+                //     fall->transform.position = InitVector3(x,y, 1.5f);
+                //     fall->transform.scale = InitVector3(16.0f, 16.0f, 1.0f);
+                //     fall->velocity = InitVector2((rand() % 20 - 10), -(50 + rand() % 100));
+                //     fall->image = _entity->image;
+                //     fall->model = _entity->model;
+                //     fall->shaderId = _entity->shaderId;
+                //     fall->color = _entity->color;
+                //     fall->Draw = BallDraw;
+                    
+                // }
 
-    }
+                }
+                
+            }
+
+    
     else if (_entity->transform.position.x > _app->windowWidth){
             
             ball->leftScore++;
             printf("Left Player Score: %d / Right Player Score: %d\n", ball->leftScore, ball->rightScore);
             _entity->transform.position = InitVector3(_app->windowWidth * 0.5f, _app->windowHeight * 0.5f, 0.0f);
             _entity->velocity = InitVector2(0.0f, 0.0f);
+            if(ball->leftScore == 5){
+                printf("Left Player wins!\n");
+                // for(int i = 0; i < vec_count(&_app->scene->entities); i++){
+                //     Entity* fall = Spawn(&_app->scene);
+                //     float x = rand() % _app->windowWidth;
+                //     float y = rand() % _app->windowHeight + (rand() % 100);
+                //     fall->transform.position = InitVector3(x,y, 1.5f);
+                //     fall->transform.scale = InitVector3(16.0f, 16.0f, 1.0f);
+                //     fall->velocity = InitVector2((rand() % 20 - 10), -(50 + rand() % 100));
+                //     fall->image = _entity->image;
+                //     fall->model = _entity->model;
+                //     fall->shaderId = _entity->shaderId;
+                //     fall->color = _entity->color;
+                //     fall->Draw = BallDraw;
+                    
+                // }
+                
+            }
     }
+   
 
 }
 
-void BallDraw(AppContext* _app, Entity* _entity) {
-    Matrix4 transform = IdentityMatrix4(); // the order is important
-    Mat4Translate(&transform, _entity->transform.position);
-    Mat4Rotate(&transform, _entity->transform.rotation * DEG2RAD, InitVector3(0.0f, 0.0f, 1.0f));
-    Mat4Scale(&transform, InitVector3(_entity->transform.scale.x, _entity->transform.scale.y, _entity->transform.scale.z));
 
-    BindShader(_entity->shaderId);
-
-    ShaderSetFloat(_entity->shaderId, "TIME", _app->time);
-    ShaderSetMatrix4(_entity->shaderId, "VIEW", _app->view);
-    ShaderSetMatrix4(_entity->shaderId, "PROJECTION", _app->projection);
-
-    ShaderSetVector4(_entity->shaderId, "COLOR", _entity->color);
-    ShaderBindTexture(_entity->shaderId, _entity->image->id, "MAIN_TEXTURE", 0);
-    ShaderSetMatrix4(_entity->shaderId, "TRANSFORM", transform);
-    DrawModel(*_entity->model);
-
-    UnBindShader();
-}
 
 void BallOnDestroy(AppContext* _app, Entity* _entity) {
 
 }
-
+void TrailOnDestroy(AppContext* _app, Entity* _entity){
+    free(_entity->data);
+}
 Entity* SpawnBall(AppContext* _app, Entity* _entity) {
     Scene** scene = &(_app->scene);
     Entity* ball = Spawn(scene);

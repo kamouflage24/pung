@@ -32,3 +32,4 @@ struct Entity {
     void (*Draw)(AppContext*, Entity*);
     void (*OnDestroy)(AppContext*, Entity*);
 };
+

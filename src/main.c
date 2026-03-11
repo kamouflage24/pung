@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
     
     // build and compile our shader program
     u32 shaderProgram = GenerateShaderFromFiles("assets/shaders/logo.vs", "assets/shaders/logo.fs");
+    u32 gridShader = GenerateShaderFromFiles("assets/shaders/grid.vs", "assets/shaders/grid.fs");
+
     printf("shaderID: %i\n", shaderProgram);
 
     float ve[] = {
@@ -64,6 +66,12 @@ int main(int argc, char *argv[])
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
     };
+    float f[] = {
+        1, 1, 0, 1, 1,
+        1, -1, 0, 1, 0,
+        -1, -1, 0, 0, 0,
+        -1, 1, 0, 0, 1
+    };
 
     f32* vertices = vec_init(32, sizeof(f32));
     vec_append(&vertices, ve, 32);
@@ -72,9 +80,10 @@ int main(int argc, char *argv[])
     vec_append(&indices, in, 6);
     
     Model model = BuildModel(&vertices, &indices, STATIC_DRAW);
+    Model gridModel = BuildModel(&vertices, &indices, STATIC_DRAW);
 
     Entity* ball = Spawn(&scene);
-    ball->transform.position = InitVector3(app.windowWidth * 0.5f, app.windowHeight * 0.5f, 0.0f);
+    ball->transform.position = InitVector3(app.windowWidth * 0.5f, app.windowHeight * 0.5f, 0.1f);
     ball->data = calloc(1, sizeof(Ball));
     ball->image = &circleImage;
     ball->model = &model;
@@ -86,7 +95,7 @@ int main(int argc, char *argv[])
 
     Entity* leftPaddle = Spawn(&scene);
     leftPaddle->name = "leftPaddle";
-    leftPaddle->transform.position = InitVector3(16.0f, app.windowHeight * 0.5f, 0.0f);
+    leftPaddle->transform.position = InitVector3(16.0f, app.windowHeight * 0.5f, 0.1f);
     leftPaddle->data = calloc(1, sizeof(Paddle));
     leftPaddle->image = &squareImage;
     leftPaddle->model = &model;
@@ -100,7 +109,7 @@ int main(int argc, char *argv[])
 
     Entity* rightPaddle = Spawn(&scene);
     rightPaddle->name = "rightPaddle";
-    rightPaddle->transform.position = InitVector3(app.windowWidth - 16.0f, app.windowHeight * 0.5f, 0.0f);
+    rightPaddle->transform.position = InitVector3(app.windowWidth - 16.0f, app.windowHeight * 0.5f, 0.1f);
     rightPaddle->data = calloc(1, sizeof(Paddle));
     rightPaddle->image = &squareImage;
     rightPaddle->model = &model;
@@ -129,6 +138,26 @@ int main(int argc, char *argv[])
 
         // render
         ClearWindow();
+
+        app.projection = Mat4Orthographic(0.0f, (float)app.windowWidth, 0.0f, (float)app.windowHeight,0.001f, 100.0f);
+        app.view = IdentityMatrix4();
+        Mat4Translate(&app.view, InitVector3(0.0f, 0.0f, -5.0f));
+        static Vector2 gridOffset = {0.0f,0.0f};
+        const float gridSpeed = 20.0f;
+        gridOffset.x += gridSpeed * app.deltaTime;
+        gridOffset.y += gridSpeed * app.deltaTime;
+        BindShader(gridShader);
+        ShaderSetMatrix4(gridShader, "VIEW", app.view);
+        ShaderSetMatrix4(gridShader, "PROJECTION", app.projection);
+        Matrix4 transform = IdentityMatrix4();
+        Mat4Scale(&transform, InitVector3(2*app.windowWidth,2*app.windowHeight, 1.0f));
+        ShaderSetMatrix4(gridShader, "TRANSFORM", transform);
+        ShaderSetFloat(gridShader, "u_spacing", 20.0f);
+        ShaderSetVector4(gridShader, "u_resolution", InitVector4(app.windowWidth, app.windowHeight, 0.0f, 0.0f)); 
+        ShaderSetVector4(gridShader, "u_gridDark", InitVector4(0.1f, 0.5f, 0.5f, 1.0f));
+        ShaderSetVector4(gridShader, "u_gridLight", InitVector4(0.5f, 0.1f, 1.0f, 1.0f));
+        ShaderSetVector2(gridShader, "u_offset", gridOffset);
+        DrawModel(gridModel);
 
         if (app.time != 0.0f)
             app.deltaTime = (SDL_GetTicksNS() * 1e-9) -  app.time;
@@ -160,5 +189,6 @@ int main(int argc, char *argv[])
     FreeWindow(&app);
 
     DeleteShader(shaderProgram);
+    DeleteShader(gridShader);
     return 0;
 }

@@ -109,11 +109,14 @@ Entity* GetEntity(Scene** _scene, int _id) {
     return NULL;
 }
 
+
 void Destroy(AppContext* _app, Scene** _scene, int _id) {
     int count = vec_count(&(*_scene)->entities);
     for (int i = 0; i < count; i++) {
         if ((*_scene)->entities[i].id == _id) {
-            (*_scene)->entities[i].OnDestroy(_app, &(*_scene)->entities[i]);
+            if((*_scene)->entities[i].OnDestroy){
+                (*_scene)->entities[i].OnDestroy(_app, &(*_scene)->entities[i]);
+            }
             
             if ((*_scene)->entities[i].data != NULL) {
                 free((*_scene)->entities[i].data);

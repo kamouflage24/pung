@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     rightPaddle->image = &squareImage;
     rightPaddle->model = &model;
     rightPaddle->shaderId = shaderProgram;
-    rightPaddle->color = InitVector4(0.0f, 1.0f, 0.0f, 1.0f);
+    rightPaddle->color = InitVector4(0.0f, 0.0f, 1.0f, 1.0f);
     rightPaddle->Start = PaddleStart;
     rightPaddle->Update = PaddleUpdate;
     rightPaddle->Draw = PaddleDraw;

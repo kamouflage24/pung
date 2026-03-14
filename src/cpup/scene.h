@@ -21,3 +21,4 @@ void    Destroy(AppContext* _app, Scene** _scene, int _id);
 
 Entity* Find(Scene** _scene, const char* _name);
 Entity* GetEntity(Scene** _scene, int _id);
+

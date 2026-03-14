@@ -3,17 +3,27 @@
 #include "cpup/scene.h"
 #include "cpup/model.h"
 #include "cpup/inputmanager.h"
+#include "paddle.h"
+#include "trail.h"
+
+
 
 #include <SDL3/SDL.h>
 
 typedef struct {
     int leftScore;
     int rightScore;
+    float trailTimer;
+    bool trailSpawned;
+    bool gameOver;
 } Ball;
 
 
 
+
 Entity* SpawnBall(AppContext* _app, Entity* _entity);
+
+
 
 bool CheckCollision(Entity* a, Entity* b){
     float ax = a->transform.position.x;
@@ -54,15 +64,61 @@ void BallDraw(AppContext* _app, Entity* _entity) {
 void BallStart(AppContext* _app, Entity* _entity) {
     _entity->color = InitVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
-    _entity->transform.scale = InitVector3(32.0f, 32.0f, 1.0f);
-}
+    _entity->transform.scale = InitVector3(32.0f, 32.0f, 0.5f);
 
+    
+    
+}
+    void vallsUpdate(AppContext* _app, Entity* _entity){
+        Vector3 delta = Vec2ToVec3(Vec2Mul(_entity->velocity,_app->deltaTime));
+        _entity->transform.position = Vec3Add(_entity->transform.position, delta);
+
+    }
+
+  void Valls(AppContext* _app, Entity* _entity){//works but doesnt spawn anything in
+      Ball* ball = (Ball*)(_entity->data);
+          for(int i = 0; i < 30; i++){
+              Entity* ball = Spawn(&_app->scene);
+              float x = rand() % _app->windowWidth;
+              float y = rand() % _app->windowHeight + (rand() % 100);
+              ball->transform.position = InitVector3(x,y, 1.5f);
+              ball->transform.scale = InitVector3(16.0f, 16.0f, 1.0f);
+              ball->velocity = InitVector2((rand() % 20 - 10), -(50 + rand() % 50));
+              ball->image = _entity->image;
+              ball->model = _entity->model;
+              ball->shaderId = _entity->shaderId;
+              ball->color = _entity->color;
+              ball->Draw = BallDraw;
+              ball->Update = vallsUpdate;
+              }
+             };
+         
+     
+ 
+void UpdateWindowTitle(AppContext* _app, Ball* ball, Entity* _entity) {
+
+char title[128];
+
+if(ball->leftScore >= 5){
+    ball->gameOver = true;
+    snprintf(title, sizeof(title), "left Player wins!");
+    Valls(_app, _entity);
+}else if(ball->rightScore >= 5){
+    ball->gameOver = true;
+    snprintf(title, sizeof(title), "Right Player Wins!");
+    Valls(_app, _entity);
+}else{
+    snprintf(title, sizeof(title), "left: %d | Right: %d", ball->leftScore, ball->rightScore);
+}
+SDL_SetWindowTitle(_app->window, title);
+}
 void BallUpdate(AppContext* _app, Entity* _entity) {
 
 
     if (GetKey(_app, SDL_SCANCODE_P))
     {
         SpawnBall(_app, _entity);
+        
     }
 
     if (Vec2EqualsZero(_entity->velocity) && GetKeyDown(_app, SDL_SCANCODE_SPACE))
@@ -78,6 +134,7 @@ void BallUpdate(AppContext* _app, Entity* _entity) {
         };
 
         _entity->velocity = Vec2Mul(directions[startingDirection], 150.0f);
+        
     } 
     
 
@@ -94,6 +151,7 @@ void BallUpdate(AppContext* _app, Entity* _entity) {
         _entity->velocity.y = offset * 5.0f;
         float paddleEdge = lp->transform.position.x + lp->transform.scale.x * 0.5f;
         _entity->transform.position.x = paddleEdge + _entity->transform.scale.x * 0.5f;
+        OnBallHitPaddle(lp, _entity);
     }
     else if(rp && CheckCollision(_entity, rp) && _entity->velocity.x > 0){
         _entity->velocity.x *= -1;
@@ -104,6 +162,7 @@ void BallUpdate(AppContext* _app, Entity* _entity) {
         _entity->velocity.y = offset * 5.0f;
         float paddleEdge = rp->transform.position.x - rp->transform.scale.x * 0.5f;
         _entity->transform.position.x = paddleEdge - _entity->transform.scale.x * 0.5f;
+        OnBallHitPaddle(rp, _entity);
     }
     if (_entity->transform.position.y - _entity->transform.scale.y * 0.5f <= 0.0f && _entity->velocity.y < 0.0f)
         _entity->velocity.y *= -1.0f; 
@@ -116,77 +175,58 @@ void BallUpdate(AppContext* _app, Entity* _entity) {
     _entity->transform.position = Vec3Add(_entity->transform.position, delta);
 
     Ball* ball = (Ball*)(_entity->data);
-    if (_entity->transform.position.x < 0.0f)
+    if (_entity->transform.position.x < 0.5f)
     {
             ball->rightScore++;
-            printf_s("Left Player Score: %d / Right Player Score: %d\n", ball->leftScore, ball->rightScore);
             _entity->transform.position = InitVector3(_app->windowWidth * 0.5f, _app->windowHeight * 0.5f, 0.0f);
             _entity->velocity = InitVector2(0.0f, 0.0f);
-            if(ball->rightScore == 5){
-                printf("Right Player Wins!\n");
-                // for(int i = 0; i < vec_count(&_app->scene->entities); i++){
-                    
-                //     Entity* fall = Spawn(&_app->scene);
-                //     float x = rand() % _app->windowWidth;
-                //     float y = rand() % _app->windowHeight + (rand() % 100);
-                //     fall->transform.position = InitVector3(x,y, 1.5f);
-                //     fall->transform.scale = InitVector3(16.0f, 16.0f, 1.0f);
-                //     fall->velocity = InitVector2((rand() % 20 - 10), -(50 + rand() % 100));
-                //     fall->image = _entity->image;
-                //     fall->model = _entity->model;
-                //     fall->shaderId = _entity->shaderId;
-                //     fall->color = _entity->color;
-                //     fall->Draw = BallDraw;
-                    
-                // }
-
-                }
-                
+             
             }
+    
+
+    
+                
+
 
     
     else if (_entity->transform.position.x > _app->windowWidth){
             
             ball->leftScore++;
-            printf("Left Player Score: %d / Right Player Score: %d\n", ball->leftScore, ball->rightScore);
+            
             _entity->transform.position = InitVector3(_app->windowWidth * 0.5f, _app->windowHeight * 0.5f, 0.0f);
             _entity->velocity = InitVector2(0.0f, 0.0f);
-            if(ball->leftScore == 5){
-                printf("Left Player wins!\n");
-                // for(int i = 0; i < vec_count(&_app->scene->entities); i++){
-                //     Entity* fall = Spawn(&_app->scene);
-                //     float x = rand() % _app->windowWidth;
-                //     float y = rand() % _app->windowHeight + (rand() % 100);
-                //     fall->transform.position = InitVector3(x,y, 1.5f);
-                //     fall->transform.scale = InitVector3(16.0f, 16.0f, 1.0f);
-                //     fall->velocity = InitVector2((rand() % 20 - 10), -(50 + rand() % 100));
-                //     fall->image = _entity->image;
-                //     fall->model = _entity->model;
-                //     fall->shaderId = _entity->shaderId;
-                //     fall->color = _entity->color;
-                //     fall->Draw = BallDraw;
-                    
-                // }
-                
-            }
+            
     }
-   
-
+    if(!Vec2EqualsZero(_entity->velocity) && !ball->trailSpawned){
+        ball->trailTimer += _app->deltaTime;
+        if(ball->trailTimer > 0.05f){
+            //SpawnTrail(_app, _entity);
+            ball->trailTimer = 0.0f;
+        }
+    }
+    UpdateWindowTitle(_app, ball, _entity);
+    if(ball->gameOver){
+        _entity->velocity = InitVector2(0.0f, 0.0f);
+        
+        return;
+    }
 }
+
+
+
 
 
 
 void BallOnDestroy(AppContext* _app, Entity* _entity) {
 
 }
-void TrailOnDestroy(AppContext* _app, Entity* _entity){
-    free(_entity->data);
-}
+
 Entity* SpawnBall(AppContext* _app, Entity* _entity) {
     Scene** scene = &(_app->scene);
     Entity* ball = Spawn(scene);
     ball->transform.position = InitVector3(_app->windowWidth * 0.5f, _app->windowHeight * 0.5f, 0.0f);
     ball->data = calloc(1, sizeof(Ball));
+    
     ball->image = _entity->image;
     ball->model = _entity->model;
     ball->shaderId = _entity->shaderId;

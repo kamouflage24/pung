@@ -11,6 +11,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <GL/gl.h>
 
 #include "cpup/io.h"
 #include "cpup/vec.h"
@@ -25,6 +26,7 @@
 
 #include "ball.h"
 #include "paddle.h"
+#include "trail.h"
 
 AppContext app;
 
@@ -40,6 +42,8 @@ int main(int argc, char *argv[])
     
     if (InitWindow(&app) > 0)
         return 1;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     Scene* scene = SceneInit();
     app.scene = scene;
@@ -52,8 +56,11 @@ int main(int argc, char *argv[])
     // build and compile our shader program
     u32 shaderProgram = GenerateShaderFromFiles("assets/shaders/logo.vs", "assets/shaders/logo.fs");
     u32 gridShader = GenerateShaderFromFiles("assets/shaders/grid.vs", "assets/shaders/grid.fs");
+    u32 noiseShader = GenerateShaderFromFiles("assets/shaders/noise.vs", "assets/shaders/noise.fs");
 
     printf("shaderID: %i\n", shaderProgram);
+    printf("shaderID: %i\n", gridShader);
+    printf("shaderID: %i\n", noiseShader);
 
     float ve[] = {
         // positions            // texture coords
@@ -73,18 +80,37 @@ int main(int argc, char *argv[])
         -1, 1, 0, 0, 1
     };
 
-    f32* vertices = vec_init(32, sizeof(f32));
-    vec_append(&vertices, ve, 32);
+    f32* vertices = vec_init(20, sizeof(f32));
+    vec_append(&vertices, ve, 20);
 
     u32* indices = vec_init(6, sizeof(u32));
     vec_append(&indices, in, 6);
     
     Model model = BuildModel(&vertices, &indices, STATIC_DRAW);
     Model gridModel = BuildModel(&vertices, &indices, STATIC_DRAW);
+    //cause crashes
+    // Entity* trail = Spawn(&scene);
+    //  trail->name =  "ballTrail";
+    // printf("Trail start\n");
+    // trail->transform.position = InitVector3(app.windowWidth * 0.5f, app.windowHeight * 0.5f, 0.1f);
+    // trail->transform.position.z += 0.01f;
 
+
+    // trail->transform.scale = InitVector3(50.0f, 50.0f, 1.0f);
+    // trail->image = &circleImage;
+    // trail->model = &model;
+    // trail->shaderId = shaderProgram;
+    // trail->color = InitVector4(1.0f, 1.0f, 1.0f, 0.5f);
+    // trail->data = calloc(1, sizeof(Trail));
+    // ((Trail*)trail->data)->life = 10.0f;
+    // trail->Update = TrailUpdate;
+    // trail->Draw = TrailDraw;
+    // trail->OnDestroy = TrailOnDestroy;
     Entity* ball = Spawn(&scene);
+    
     ball->transform.position = InitVector3(app.windowWidth * 0.5f, app.windowHeight * 0.5f, 0.1f);
     ball->data = calloc(1, sizeof(Ball));
+    ball->name = "ball";
     ball->image = &circleImage;
     ball->model = &model;
     ball->shaderId = shaderProgram;
@@ -92,6 +118,7 @@ int main(int argc, char *argv[])
     ball->Update = BallUpdate;
     ball->Draw = BallDraw;
     ball->OnDestroy = BallOnDestroy;
+    ((Ball*)ball->data)->trailTimer = 0.f;
 
     Entity* leftPaddle = Spawn(&scene);
     leftPaddle->name = "leftPaddle";
@@ -125,9 +152,9 @@ int main(int argc, char *argv[])
     bool running = true;
     f32 time = 0.0f;
     while(running) {
-        // imput
+        
         InputManagerNewFrame(&app);
-        //printf("FPS: %f Entity Count: %i\n", 1.0f/app.deltaTime, vec_count(&scene->entities));
+        
 
         SDL_Event event;
         while (SDL_PollEvent(&event))
@@ -146,18 +173,37 @@ int main(int argc, char *argv[])
         const float gridSpeed = 20.0f;
         gridOffset.x += gridSpeed * app.deltaTime;
         gridOffset.y += gridSpeed * app.deltaTime;
-        BindShader(gridShader);
-        ShaderSetMatrix4(gridShader, "VIEW", app.view);
-        ShaderSetMatrix4(gridShader, "PROJECTION", app.projection);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+         BindShader(gridShader);
+        
+         ShaderSetMatrix4(gridShader, "VIEW", app.view);
+         ShaderSetMatrix4(gridShader, "PROJECTION", app.projection);
+        
         Matrix4 transform = IdentityMatrix4();
-        Mat4Scale(&transform, InitVector3(2*app.windowWidth,2*app.windowHeight, 1.0f));
-        ShaderSetMatrix4(gridShader, "TRANSFORM", transform);
-        ShaderSetFloat(gridShader, "u_spacing", 20.0f);
-        ShaderSetVector4(gridShader, "u_resolution", InitVector4(app.windowWidth, app.windowHeight, 0.0f, 0.0f)); 
-        ShaderSetVector4(gridShader, "u_gridDark", InitVector4(0.1f, 0.5f, 0.5f, 1.0f));
-        ShaderSetVector4(gridShader, "u_gridLight", InitVector4(0.5f, 0.1f, 1.0f, 1.0f));
-        ShaderSetVector2(gridShader, "u_offset", gridOffset);
-        DrawModel(gridModel);
+         Mat4Scale(&transform, InitVector3(2*app.windowWidth,2*app.windowHeight, 1.0f));
+         ShaderSetMatrix4(gridShader, "TRANSFORM", transform);
+        
+         ShaderSetFloat(gridShader, "u_spacing", 20.0f);
+         ShaderSetVector4(gridShader, "u_resolution", InitVector4(app.windowWidth, app.windowHeight, 0.0f, 0.0f)); 
+        
+         ShaderSetVector4(gridShader, "u_gridDark", InitVector4(0.1f, 0.5f, 0.5f, 1.0f));
+         ShaderSetVector4(gridShader, "u_gridLight", InitVector4(0.5f, 0.1f, 1.0f, 1.0f));
+         ShaderSetVector2(gridShader, "u_offset", gridOffset);
+       
+
+         DrawModel(gridModel);
+        
+        // BindShader(noiseShader);
+        // Mat4Translate(&app.view, InitVector3(0.0f, 0.0f, -4.0f));
+        // ShaderSetMatrix4(noiseShader, "VIEW", app.view);
+        // ShaderSetMatrix4(noiseShader, "PROJECTION", app.projection);
+        // Matrix4 transform = IdentityMatrix4();
+        // Mat4Scale(&transform, InitVector3(2*app.windowWidth,2*app.windowHeight, 1.0f));
+        // ShaderSetMatrix4(noiseShader, "TRANSFORM", transform);
+        // ShaderSetVector2(noiseShader, "u_resolution", InitVector2(app.windowWidth, app.windowHeight)); 
+        // ShaderSetFloat(noiseShader, "u_time", app.time);
+        // DrawModel(gridModel);
 
         if (app.time != 0.0f)
             app.deltaTime = (SDL_GetTicksNS() * 1e-9) -  app.time;
@@ -170,6 +216,7 @@ int main(int argc, char *argv[])
         Mat4Translate(&app.view, InitVector3(0.0f, 0.0f, -0.5f));
 
         SceneUpdate(&app, &scene);
+        
         
 
         SceneDraw(&app, &scene);
@@ -190,5 +237,6 @@ int main(int argc, char *argv[])
 
     DeleteShader(shaderProgram);
     DeleteShader(gridShader);
+    DeleteShader(noiseShader);
     return 0;
 }
